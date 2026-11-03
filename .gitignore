@@ -5,6 +5,9 @@ tools/
 data/*
 !data/README.md
 
+# Local SQLite database, rebuilt by the loader
+*.db
+
 __pycache__/
 *.pyc
 .venv/
