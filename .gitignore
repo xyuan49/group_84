@@ -1,0 +1,10 @@
+# Synthea jar + portable JDK (large, downloadable)
+tools/
+
+# Generated data is not committed; see data/README.md to regenerate it
+data/*
+!data/README.md
+
+__pycache__/
+*.pyc
+.venv/
