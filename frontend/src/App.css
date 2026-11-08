@@ -1,0 +1,31 @@
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+main {
+  max-width: 850px;
+  margin: 100px auto;
+  padding: 50px;
+  background-color: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+h1 {
+  color: #087f8c;
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+h2 {
+  color: #24556a;
+  font-size: 26px;
+}
+
+p {
+  color: #526570;
+  font-size: 18px;
+  line-height: 1.7;
+}
