@@ -104,6 +104,20 @@ app/routers/<name>.py  one router per resource (patients.py is the example)
 tests/conftest.py      `client` fixture: API on an empty in-memory database
 ```
 
+Pydantic models in `app/schemas.py`:
+
+| Model | For | Validation |
+|---|---|---|
+| `PatientOut`, `ConditionOut`, `MedicationOut`, `ObservationOut` | reading the clinical record | — |
+| `GlucoseOut`, `InsulinOut`, `MealOut` | reading logs from any source (`fhir` / `user` / `uci` / `cgm`) | `source`, `meal_context`, `insulin_type` must be known values |
+| `GlucoseIn` | patient logs a reading | 20–600 mg/dL; `meal_context` fasting / before_meal / after_meal / bedtime |
+| `InsulinIn` | patient logs a dose | 0 < units ≤ 100; type rapid / short / intermediate / long / premixed |
+| `MealIn` | patient logs a meal | only `eaten_at` required; description ≤ 500 chars, carbs 0–500 g, calories 0–5000 |
+
+`...In` models drop a UTC offset and keep the clock time, matching how the
+loaders store times. Endpoints set `source="user"` themselves; it is not
+part of the request.
+
 To add an endpoint, follow `app/routers/patients.py`:
 
 1. Add a response model to `app/schemas.py` (subclass `ORMModel` so it reads
