@@ -17,7 +17,7 @@ First generate and filter the Synthea data (see `data/README.md`), then from
 python -m app.loaders.synthea ../data/synthea_t2d
 ```
 
-This creates `backend/glucotrack.db` (SQLite, ~10 MB, gitignored) with 85
+This creates `backend/glucotrack.db` (SQLite, gitignored; ~21 MB after all loaders) with 85
 patients. Re-running skips patients already loaded. Set `DATABASE_URL` to use
 a different database file.
 
@@ -36,6 +36,24 @@ least 14 days of data are used. Records are validated with Pydantic models
 (`UciRecord`, `UciGlucose`, `UciInsulin`, `UciMeal`); invalid rows are counted
 and skipped. Re-running skips patients that already have UCI data.
 
+Then add the Shanghai T2DM continuous glucose monitoring (CGM) data:
+
+```
+python -m app.loaders.shanghai ../data/shanghai_raw/Shanghai_T2DM
+```
+
+This covers the patients who are not on insulin: 41 of the 58 get a CGM
+series (a reading every 15 minutes, 7-14 days, plus diet records). Only
+Shanghai patients who received no insulin and have at least 7 days of CGM
+are used, one file per person. Dates are shifted the same way as UCI.
+Records are validated with Pydantic models (`CgmReading`, `DietEntry`).
+Finger-stick glucose, ketones and oral-medication records in the files are
+not stored. Re-running skips patients that already have CGM data.
+
+After all three loaders, 68 of 85 patients have dense glucose data for the
+last 14 days; the other 17 (no insulin, no CGM series left) only have
+Synthea lab values.
+
 ## Tables (`app/models.py`)
 
 | Table | Contents | Source |
@@ -44,9 +62,9 @@ and skipped. Re-running skips patients that already have UCI data.
 | `conditions` | diagnoses and history, SNOMED CT code | FHIR Condition |
 | `medications` | prescriptions, RxNorm code, status, prescriber | FHIR MedicationRequest |
 | `observations` | HbA1c `4548-4`, BMI `39156-5`, systolic `8480-6`, diastolic `8462-4` | FHIR Observation |
-| `glucose_readings` | all glucose values, with `source` = fhir / user / uci / cgm and optional `meal_context` | FHIR lab glucose + patient entries |
+| `glucose_readings` | all glucose values, with `source` = fhir / user / uci / cgm and optional `meal_context` | FHIR lab glucose, UCI, Shanghai CGM, patient entries |
 | `insulin_doses` | units, insulin type (`short` regular / `intermediate` NPH / `long` UltraLente for UCI), time | patient entries / UCI |
-| `meals` | description, carbs, calories (UCI meals only say typical / larger / smaller, no carbs) | patient entries / UCI |
+| `meals` | description, carbs, calories (UCI meals only say typical / larger / smaller; Shanghai meals list foods and portions; no carbs in either) | patient entries / UCI / Shanghai CGM |
 
 Notes:
 - Times are stored as the patient's local clock time (offset dropped) so

@@ -98,7 +98,7 @@ class GlucoseReading(Base):
     value_mg_dl: Mapped[float] = mapped_column(Float)
     measured_at: Mapped[datetime] = mapped_column(DateTime)
     meal_context: Mapped[str | None]  # fasting / before_meal / after_meal / bedtime
-    source: Mapped[str]  # fhir / user / uci / cgm
+    source: Mapped[str]  # fhir / user / uci / cgm (Shanghai CGM)
     fhir_id: Mapped[str | None]
 
     patient: Mapped[Patient] = relationship(back_populates="glucose_readings")
@@ -126,4 +126,4 @@ class Meal(Base):
     description: Mapped[str | None]
     carbs_g: Mapped[float | None] = mapped_column(Float)
     calories: Mapped[float | None] = mapped_column(Float)
-    source: Mapped[str]  # user / uci
+    source: Mapped[str]  # user / uci / cgm (Shanghai diet records)
