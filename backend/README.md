@@ -94,6 +94,18 @@ Current endpoints:
 | GET | `/api/health` | `{"status": "ok"}` |
 | GET | `/api/patients?limit=&offset=` | patients, sorted by name |
 | GET | `/api/patients/{patient_id}` | one patient, or 404 |
+| GET | `.../{patient_id}/conditions?status=&disorders_only=` | diagnoses, newest first; `disorders_only=true` hides social findings |
+| GET | `.../{patient_id}/medications?status=` | prescriptions, newest first; `active` / `completed` / `stopped` |
+| GET | `.../{patient_id}/observations?code=&start=&end=&days=` | HbA1c `4548-4`, BMI `39156-5`, systolic `8480-6`, diastolic `8462-4`; `code` repeatable |
+| GET | `.../{patient_id}/glucose?source=&start=&end=&days=` | all glucose in one history; `source` fhir / uci / cgm / user, repeatable |
+| GET | `.../{patient_id}/insulin?source=&start=&end=&days=` | insulin doses (UCI patients only so far) |
+| GET | `.../{patient_id}/meals?source=&start=&end=&days=` | meals (UCI and Shanghai) |
+
+Time series (observations, glucose, insulin, meals) come back oldest first,
+ready to plot. `days=N` means the last N days ending at the patient's latest
+matching record (or at `end`), not at today: the loaded data ends on
+2026-11-01. Use `days` or `start`, not both. CGM patients have ~1,300 glucose
+readings per 14 days, so pass a range for charts.
 
 Layout:
 

@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
-from app.routers import patients
+from app.routers import logs, patients, records
 
 # Comma-separated list of frontend origins; default is the Vite dev server.
 CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "http://localhost:5173").split(",") if o.strip()]
@@ -21,6 +21,8 @@ app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["*
 
 # One router per resource; add new ones here.
 app.include_router(patients.router)
+app.include_router(records.router)
+app.include_router(logs.router)
 
 
 @app.get("/", include_in_schema=False)
