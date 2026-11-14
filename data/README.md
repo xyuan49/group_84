@@ -71,3 +71,33 @@ missing or impossible date (`06-31-1991`), non-numeric values (`3A`, `0Hi`,
 `0Lo`), zero or >100-unit insulin doses, and undocumented codes (0, 4, 36, 56).
 Paper-record entries have fixed times (08:00, 12:00, 18:00, 22:00), so only
 series with real device timestamps are used.
+
+## `shanghai_raw/` — Shanghai T2DM continuous glucose monitoring
+
+Real-life CGM readings every 15 minutes for 3-14 days, with diet records and
+insulin / oral medication administrations, from 100 people with Type 2
+diabetes (109 files; a few people have two monitoring periods). Source: Zhao,
+Q. et al., *Chinese diabetes datasets for data-driven machine learning*,
+Scientific Data 10, 35 (2023), doi:10.1038/s41597-023-01940-7. Data:
+doi:10.6084/m9.figshare.c.6310860, CC BY 4.0. The Type 1 files in the same
+download are not used.
+
+Download and extract (gitignored, ~4 MB):
+
+```
+mkdir -p data/shanghai_raw && cd data/shanghai_raw
+curl -L -o diabetes_datasets.zip https://ndownloader.figshare.com/files/42966622
+unzip diabetes_datasets.zip          # creates Shanghai_T2DM/ with one .xls/.xlsx per period
+```
+
+Then load it with `python -m app.loaders.shanghai ../data/shanghai_raw/Shanghai_T2DM`
+(see `backend/README.md`). Things to know about the files:
+
+- Column positions are stable, but header text varies between files (some are
+  only in Chinese), so the loader checks the start of the English headers.
+- Use the insulin columns in each file, not the summary sheet, to tell who
+  received insulin: 11 files whose summary lists no insulin do record doses.
+- 280 diet cells say "data not available"; they are kept as meals with no
+  description, since the meal time is still known.
+- Diet text is in English (column `Dietary intake`) and Chinese (`饮食`); only
+  the English column is used.
