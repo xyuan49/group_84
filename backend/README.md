@@ -21,6 +21,21 @@ This creates `backend/glucotrack.db` (SQLite, ~10 MB, gitignored) with 85
 patients. Re-running skips patients already loaded. Set `DATABASE_URL` to use
 a different database file.
 
+Then add the UCI self-monitoring data (download steps in `data/README.md`):
+
+```
+python -m app.loaders.uci ../data/uci_raw/Diabetes-Data
+```
+
+Synthea has only a few lab glucose values per patient per year, so this gives
+the 27 insulin-treated Synthea patients weeks of glucose, insulin and meal
+records (median 47 glucose readings in the last 14 days). Each UCI series is
+shifted so it ends on 2026-11-01, the Synthea reference date (`--anchor` to
+change); time of day is kept. Only series with real device timestamps and at
+least 14 days of data are used. Records are validated with Pydantic models
+(`UciRecord`, `UciGlucose`, `UciInsulin`, `UciMeal`); invalid rows are counted
+and skipped. Re-running skips patients that already have UCI data.
+
 ## Tables (`app/models.py`)
 
 | Table | Contents | Source |
@@ -30,8 +45,8 @@ a different database file.
 | `medications` | prescriptions, RxNorm code, status, prescriber | FHIR MedicationRequest |
 | `observations` | HbA1c `4548-4`, BMI `39156-5`, systolic `8480-6`, diastolic `8462-4` | FHIR Observation |
 | `glucose_readings` | all glucose values, with `source` = fhir / user / uci / cgm and optional `meal_context` | FHIR lab glucose + patient entries |
-| `insulin_doses` | units, insulin type, time | patient entries / UCI (not loaded yet) |
-| `meals` | description, carbs, calories | patient entries / UCI (not loaded yet) |
+| `insulin_doses` | units, insulin type (`short` regular / `intermediate` NPH / `long` UltraLente for UCI), time | patient entries / UCI |
+| `meals` | description, carbs, calories (UCI meals only say typical / larger / smaller, no carbs) | patient entries / UCI |
 
 Notes:
 - Times are stored as the patient's local clock time (offset dropped) so

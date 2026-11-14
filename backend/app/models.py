@@ -111,7 +111,7 @@ class InsulinDose(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     patient_id: Mapped[str] = mapped_column(ForeignKey("patients.id"))
     units: Mapped[float] = mapped_column(Float)
-    insulin_type: Mapped[str | None]  # rapid / long / premixed
+    insulin_type: Mapped[str | None]  # rapid / short / intermediate / long / premixed
     administered_at: Mapped[datetime] = mapped_column(DateTime)
     source: Mapped[str]  # user / uci
 
