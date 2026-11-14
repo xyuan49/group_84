@@ -74,7 +74,46 @@ Notes:
 - `conditions` includes every Synthea condition, including social findings
   such as "Risk activity involvement (finding)". Filter by SNOMED code or by
   `(disorder)` in `display` for medical history.
-- For the API: use `app.db.get_db` as the FastAPI dependency for a session.
+
+## API
+
+Run from `backend/` (after building the database):
+
+```
+uvicorn app.main:app --reload
+```
+
+Open http://localhost:8000 (redirects to the interactive docs at `/docs`).
+CORS allows the Vite dev server (`http://localhost:5173`); set `CORS_ORIGINS`
+(comma-separated) to allow other frontends, e.g. the deployed site.
+
+Current endpoints:
+
+| Method | Path | Returns |
+|---|---|---|
+| GET | `/api/health` | `{"status": "ok"}` |
+| GET | `/api/patients?limit=&offset=` | patients, sorted by name |
+| GET | `/api/patients/{patient_id}` | one patient, or 404 |
+
+Layout:
+
+```
+app/main.py            app, CORS, includes each router
+app/schemas.py         Pydantic request/response models
+app/routers/<name>.py  one router per resource (patients.py is the example)
+tests/conftest.py      `client` fixture: API on an empty in-memory database
+```
+
+To add an endpoint, follow `app/routers/patients.py`:
+
+1. Add a response model to `app/schemas.py` (subclass `ORMModel` so it reads
+   SQLAlchemy rows), and a request model with `Field(...)` limits for POSTs.
+2. Add the route to a router, with `db: Session = Depends(get_db)` and
+   `response_model=...`. Per-patient routes take
+   `patient: Patient = Depends(get_patient)` so a bad id returns 404.
+3. New router file? Include it in `app/main.py`.
+4. Test it with the `client` fixture: add rows through `db_session`, then
+   call the endpoint (see `tests/test_api.py`).
 
 ## Tests
 
