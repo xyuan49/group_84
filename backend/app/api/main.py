@@ -4,6 +4,10 @@ from sqlalchemy.orm import Session
 from app.api.models import Message
 from app.api.hello_world_utils import hello_world
 
+from app.api.routers.shanghai import router as shanghai_router
+from app.api.routers.uci import router as uci_router
+from app.api.routers.stanford import router as stanford_router
+
 from app.db import get_db
 from app.models import (
     Patient,
@@ -18,6 +22,9 @@ app = FastAPI(
     description="project backend",
     version="0.0.1"
 )
+app.include_router(shanghai_router)
+app.include_router(uci_router)
+app.include_router(stanford_router)
 
 
 @app.get(
