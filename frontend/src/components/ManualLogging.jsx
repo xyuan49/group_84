@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { createGlucose } from '../services/api';
 
 const initialGlucose = {
     value: '',
@@ -20,12 +21,43 @@ const initialNutrition = {
     eatenAt: '',
 };
 
-export default function ManualLogging({ patientId }) {
+export default function ManualLogging({ patientId, onGlucoseSaved }) {
     const [activeTab, setActiveTab] = useState('glucose');
 
     const [glucose, setGlucose] = useState(initialGlucose);
     const [insulin, setInsulin] = useState(initialInsulin);
     const [nutrition, setNutrition] = useState(initialNutrition);
+
+    const [savingGlucose, setSavingGlucose] = useState(false);
+    const [glucoseError, setGlucoseError] = useState('');
+    const [glucoseStatus, setGlucoseStatus] = useState('');
+
+    async function handleGlucoseSubmit(event) {
+        event.preventDefault();
+
+        if (!patientId || savingGlucose) return;
+
+        setSavingGlucose(true);
+        setGlucoseError('');
+        setGlucoseStatus('');
+
+        try {
+            await createGlucose(patientId, {
+                value_mg_dl: Number(glucose.value),
+                measured_at: glucose.measuredAt,
+                meal_context: glucose.mealContext || null,
+            });
+        } catch (error) {
+            setGlucoseError(error.message);
+            setSavingGlucose(false);
+            return;
+        }
+
+        setGlucose(initialGlucose);
+        setGlucoseStatus('Glucose reading saved.');
+        setSavingGlucose(false);
+        onGlucoseSaved?.();
+    }
 
     // Saving will be enabled when backend POST endpoints are ready.
     const savingAvailable = false;
@@ -99,7 +131,7 @@ export default function ManualLogging({ patientId }) {
             </div>
 
             {activeTab === 'glucose' && (
-                <form onSubmit={(event) => event.preventDefault()}>
+                <form onSubmit={handleGlucoseSubmit}>
                     <h3>Log Glucose Reading</h3>
 
                     <div className="form-field">
@@ -110,9 +142,9 @@ export default function ManualLogging({ patientId }) {
                             id="glucose-value"
                             name="value"
                             type="number"
-                            min="1"
+                            min="20"
                             max="600"
-                            step="1"
+                            step="any"
                             required
                             value={glucose.value}
                             onChange={handleGlucoseChange}
@@ -148,13 +180,16 @@ export default function ManualLogging({ patientId }) {
                             <option value="before_meal">Before Meal</option>
                             <option value="after_meal">After Meal</option>
                             <option value="bedtime">Bedtime</option>
-                            <option value="other">Other</option>
+                            <option value="">Unspecified</option>
                         </select>
                     </div>
 
-                    <button type="submit" disabled={!savingAvailable || !patientId}>
-                        Save Glucose Reading
+                    <button type="submit" disabled={savingGlucose || !patientId}>
+                        {savingGlucose ? 'Saving...' : 'Save Glucose Reading'}
                     </button>
+
+                    {glucoseError && <p role="alert">{glucoseError}</p>}
+                    <p role="status">{glucoseStatus}</p>
                 </form>
             )}
 
@@ -297,8 +332,7 @@ export default function ManualLogging({ patientId }) {
                     color: '#64748b',
                 }}
             >
-                Saving is not yet available. The backend must support
-                POST requests before records can be stored.
+              Insulin and nutrition saving are not yet available.
             </p>
         </section>
     );

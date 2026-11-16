@@ -32,3 +32,19 @@ export function getInsulin(patientId) {
         `/api/patients/${encodeURIComponent(patientId)}/insulin?days=14`
     );
 }
+
+export async function createGlucose(patientId, body) {
+    const response = await fetch(`${API_BASE}/api/patients/${encodeURIComponent(patientId)}/glucose`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error(`Could not save glucose reading (${response.status})`);
+    }
+
+    return response.json();
+}

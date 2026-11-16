@@ -113,6 +113,14 @@ export default function Dashboard() {
         setSelectedId(event.target.value);
     }
 
+    function refreshGlucose() {
+        getGlucose(selectedId)
+            .then((data) => setReadings(data))
+            .catch((error) => {
+                setError(`Reading saved, but the chart could not refresh: ${error.message}`);
+            });
+    }
+
     return (
         <main className="dashboard">
             {/* Header */}
@@ -173,6 +181,7 @@ export default function Dashboard() {
                 <ManualLogging
                     key={selectedId}
                     patientId={selectedId}
+                    onGlucoseSaved={refreshGlucose}
                 />
             )}
 
