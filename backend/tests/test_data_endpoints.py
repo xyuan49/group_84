@@ -118,3 +118,34 @@ def test_empty_patient_and_unknown_patient(client, record):
     assert client.get("/api/patients/p-2/glucose", params={"days": 14}).json() == []
     for path in ("conditions", "medications", "observations", "glucose", "insulin", "meals"):
         assert client.get(f"/api/patients/missing/{path}").status_code == 404
+
+
+def test_create_glucose(client, patients):
+    body = {
+        "value_mg_dl": 145,
+        "measured_at": "2026-11-15T08:00:00",
+        "meal_context": "fasting",
+    }
+
+    response = client.post("/api/patients/p-1/glucose", json=body)
+
+    assert response.status_code == 201
+    saved = response.json()
+    assert saved["value_mg_dl"] == 145
+    assert saved["source"] == "user"
+
+    history = client.get("/api/patients/p-1/glucose?source=user")
+    assert history.json() == [saved]
+    assert client.get("/api/patients/p-2/glucose").json() == []
+
+
+def test_create_glucose_rejects_invalid_value(client, patients):
+    body = {
+        "value_mg_dl": 19,
+        "measured_at": "2026-11-15T08:00:00",
+    }
+
+    response = client.post("/api/patients/p-1/glucose", json = body)
+
+    assert response.status_code == 422
+    assert client.get("/api/patients/p-1/glucose").json() == []
