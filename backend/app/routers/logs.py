@@ -14,11 +14,27 @@ from app.db import get_db
 from app.models import GlucoseReading, InsulinDose, Meal, Patient
 from app.routers.patients import get_patient
 from app.routers.timeseries import time_window
-from app.schemas import GlucoseOut, GlucoseSource, InsulinOut, LogSource, MealOut
+from app.schemas import (
+    GlucoseIn,
+    GlucoseOut,
+    GlucoseSource,
+    InsulinOut,
+    LogSource,
+    MealOut,
+)
 
 router = APIRouter(prefix="/api/patients/{patient_id}", tags=["glucose, insulin, meals"])
 
 DAYS = Query(None, ge=1, le=3650, description="Last N days, ending at the patient's latest record")
+
+
+@router.post("/glucose", response_model=GlucoseOut, status_code=201)
+def create_glucose(body: GlucoseIn, patient: Patient = Depends(get_patient), db: Session = Depends(get_db)):
+    reading = GlucoseReading(patient_id=patient.id, source="user", **body.model_dump())
+    db.add(reading)
+    db.commit()
+    db.refresh(reading)
+    return reading
 
 
 @router.get("/glucose", response_model=list[GlucoseOut])
