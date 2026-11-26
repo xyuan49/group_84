@@ -1,7 +1,7 @@
 """Glucose readings, insulin doses and meals, from every source.
 
 Sources: `fhir` (Synthea lab glucose), `uci` (UCI dataset), `cgm` (Shanghai
-CGM dataset) and `user` (patient entries, once the logging endpoints exist).
+CGM dataset) and `user` (patient entries from the POST endpoints below).
 """
 
 from datetime import datetime
@@ -18,8 +18,10 @@ from app.schemas import (
     GlucoseIn,
     GlucoseOut,
     GlucoseSource,
+    InsulinIn,
     InsulinOut,
     LogSource,
+    MealIn,
     MealOut,
 )
 
@@ -58,6 +60,15 @@ def list_glucose(
     return db.scalars(stmt.order_by(GlucoseReading.measured_at, GlucoseReading.id)).all()
 
 
+@router.post("/insulin", response_model=InsulinOut, status_code=201)
+def create_insulin(body: InsulinIn, patient: Patient = Depends(get_patient), db: Session = Depends(get_db)):
+    dose = InsulinDose(patient_id=patient.id, source="user", **body.model_dump())
+    db.add(dose)
+    db.commit()
+    db.refresh(dose)
+    return dose
+
+
 @router.get("/insulin", response_model=list[InsulinOut])
 def list_insulin(
     source: list[LogSource] | None = Query(None, description="Repeatable: uci, user"),
@@ -67,12 +78,21 @@ def list_insulin(
     patient: Patient = Depends(get_patient),
     db: Session = Depends(get_db),
 ):
-    """Insulin doses, oldest first. Only insulin-treated patients (UCI data) have any."""
+    """Insulin doses, oldest first: UCI data for insulin-treated patients, plus patient entries."""
     stmt = select(InsulinDose).where(InsulinDose.patient_id == patient.id)
     if source:
         stmt = stmt.where(InsulinDose.source.in_(source))
     stmt = time_window(db, stmt, InsulinDose.administered_at, start, end, days)
     return db.scalars(stmt.order_by(InsulinDose.administered_at, InsulinDose.id)).all()
+
+
+@router.post("/meals", response_model=MealOut, status_code=201)
+def create_meal(body: MealIn, patient: Patient = Depends(get_patient), db: Session = Depends(get_db)):
+    meal = Meal(patient_id=patient.id, source="user", **body.model_dump())
+    db.add(meal)
+    db.commit()
+    db.refresh(meal)
+    return meal
 
 
 @router.get("/meals", response_model=list[MealOut])

@@ -121,6 +121,14 @@ export default function Dashboard() {
             });
     }
 
+    function refreshInsulin() {
+        getInsulin(selectedId)
+            .then((data) => setInsulinReadings(data))
+            .catch((error) => {
+                setError(`Dose saved, but the chart could not refresh: ${error.message}`);
+            });
+    }
+
     return (
         <main className="dashboard">
             {/* Header */}
@@ -182,6 +190,7 @@ export default function Dashboard() {
                     key={selectedId}
                     patientId={selectedId}
                     onGlucoseSaved={refreshGlucose}
+                    onInsulinSaved={refreshInsulin}
                 />
             )}
 

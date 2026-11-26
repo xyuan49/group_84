@@ -33,18 +33,40 @@ export function getInsulin(patientId) {
     );
 }
 
-export async function createGlucose(patientId, body) {
-    const response = await fetch(`${API_BASE}/api/patients/${encodeURIComponent(patientId)}/glucose`,
-        {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-        }
-    );
+async function postData(path, body, what) {
+    const response = await fetch(`${API_BASE}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
 
     if (!response.ok) {
-        throw new Error(`Could not save glucose reading (${response.status})`);
+        throw new Error(`Could not save ${what} (${response.status})`);
     }
 
     return response.json();
+}
+
+export function createGlucose(patientId, body) {
+    return postData(
+        `/api/patients/${encodeURIComponent(patientId)}/glucose`,
+        body,
+        'glucose reading'
+    );
+}
+
+export function createInsulin(patientId, body) {
+    return postData(
+        `/api/patients/${encodeURIComponent(patientId)}/insulin`,
+        body,
+        'insulin dose'
+    );
+}
+
+export function createMeal(patientId, body) {
+    return postData(
+        `/api/patients/${encodeURIComponent(patientId)}/meals`,
+        body,
+        'meal'
+    );
 }

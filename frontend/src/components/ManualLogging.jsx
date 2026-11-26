@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { createGlucose } from '../services/api';
+import { createGlucose, createInsulin, createMeal } from '../services/api';
 
 const initialGlucose = {
     value: '',
@@ -10,7 +10,7 @@ const initialGlucose = {
 
 const initialInsulin = {
     units: '',
-    insulinType: 'short',
+    insulinType: 'rapid',
     administeredAt: '',
 };
 
@@ -21,46 +21,99 @@ const initialNutrition = {
     eatenAt: '',
 };
 
-export default function ManualLogging({ patientId, onGlucoseSaved }) {
+// Empty optional number fields are sent as null, not 0.
+function optionalNumber(value) {
+    return value === '' ? null : Number(value);
+}
+
+export default function ManualLogging({ patientId, onGlucoseSaved, onInsulinSaved, onMealSaved }) {
     const [activeTab, setActiveTab] = useState('glucose');
 
     const [glucose, setGlucose] = useState(initialGlucose);
     const [insulin, setInsulin] = useState(initialInsulin);
     const [nutrition, setNutrition] = useState(initialNutrition);
 
-    const [savingGlucose, setSavingGlucose] = useState(false);
-    const [glucoseError, setGlucoseError] = useState('');
-    const [glucoseStatus, setGlucoseStatus] = useState('');
+    // One save in flight at a time; messages belong to the open form.
+    const [saving, setSaving] = useState(false);
+    const [saveError, setSaveError] = useState('');
+    const [saveStatus, setSaveStatus] = useState('');
 
-    async function handleGlucoseSubmit(event) {
+    function switchTab(tab) {
+        setActiveTab(tab);
+        setSaveError('');
+        setSaveStatus('');
+    }
+
+    async function save(event, request, onSuccess, message) {
         event.preventDefault();
 
-        if (!patientId || savingGlucose) return;
+        if (!patientId || saving) return;
 
-        setSavingGlucose(true);
-        setGlucoseError('');
-        setGlucoseStatus('');
+        setSaving(true);
+        setSaveError('');
+        setSaveStatus('');
 
         try {
-            await createGlucose(patientId, {
-                value_mg_dl: Number(glucose.value),
-                measured_at: glucose.measuredAt,
-                meal_context: glucose.mealContext || null,
-            });
+            await request();
         } catch (error) {
-            setGlucoseError(error.message);
-            setSavingGlucose(false);
+            setSaveError(error.message);
+            setSaving(false);
             return;
         }
 
-        setGlucose(initialGlucose);
-        setGlucoseStatus('Glucose reading saved.');
-        setSavingGlucose(false);
-        onGlucoseSaved?.();
+        setSaving(false);
+        setSaveStatus(message);
+        onSuccess();
     }
 
-    // Saving will be enabled when backend POST endpoints are ready.
-    const savingAvailable = false;
+    function handleGlucoseSubmit(event) {
+        return save(
+            event,
+            () => createGlucose(patientId, {
+                value_mg_dl: Number(glucose.value),
+                measured_at: glucose.measuredAt,
+                meal_context: glucose.mealContext || null,
+            }),
+            () => {
+                setGlucose(initialGlucose);
+                onGlucoseSaved?.();
+            },
+            'Glucose reading saved.'
+        );
+    }
+
+    function handleInsulinSubmit(event) {
+        return save(
+            event,
+            () => createInsulin(patientId, {
+                units: Number(insulin.units),
+                insulin_type: insulin.insulinType || null,
+                administered_at: insulin.administeredAt,
+            }),
+            () => {
+                setInsulin(initialInsulin);
+                onInsulinSaved?.();
+            },
+            'Insulin dose saved.'
+        );
+    }
+
+    function handleNutritionSubmit(event) {
+        return save(
+            event,
+            () => createMeal(patientId, {
+                description: nutrition.description.trim(),
+                carbs_g: optionalNumber(nutrition.carbs),
+                calories: optionalNumber(nutrition.calories),
+                eaten_at: nutrition.eatenAt,
+            }),
+            () => {
+                setNutrition(initialNutrition);
+                onMealSaved?.();
+            },
+            'Meal saved.'
+        );
+    }
 
     const handleGlucoseChange = (event) => {
         const { name, value } = event.target;
@@ -89,6 +142,13 @@ export default function ManualLogging({ patientId, onGlucoseSaved }) {
         }));
     };
 
+    const messages = (
+        <>
+            {saveError && <p role="alert">{saveError}</p>}
+            <p role="status">{saveStatus}</p>
+        </>
+    );
+
     return (
         <section className="chart-card">
             <h2>Manual Logging</h2>
@@ -107,7 +167,7 @@ export default function ManualLogging({ patientId, onGlucoseSaved }) {
             >
                 <button
                     type="button"
-                    onClick={() => setActiveTab('glucose')}
+                    onClick={() => switchTab('glucose')}
                     aria-pressed={activeTab === 'glucose'}
                 >
                     Glucose
@@ -115,7 +175,7 @@ export default function ManualLogging({ patientId, onGlucoseSaved }) {
 
                 <button
                     type="button"
-                    onClick={() => setActiveTab('insulin')}
+                    onClick={() => switchTab('insulin')}
                     aria-pressed={activeTab === 'insulin'}
                 >
                     Insulin
@@ -123,7 +183,7 @@ export default function ManualLogging({ patientId, onGlucoseSaved }) {
 
                 <button
                     type="button"
-                    onClick={() => setActiveTab('nutrition')}
+                    onClick={() => switchTab('nutrition')}
                     aria-pressed={activeTab === 'nutrition'}
                 >
                     Nutrition
@@ -184,17 +244,16 @@ export default function ManualLogging({ patientId, onGlucoseSaved }) {
                         </select>
                     </div>
 
-                    <button type="submit" disabled={savingGlucose || !patientId}>
-                        {savingGlucose ? 'Saving...' : 'Save Glucose Reading'}
+                    <button type="submit" disabled={saving || !patientId}>
+                        {saving ? 'Saving...' : 'Save Glucose Reading'}
                     </button>
 
-                    {glucoseError && <p role="alert">{glucoseError}</p>}
-                    <p role="status">{glucoseStatus}</p>
+                    {messages}
                 </form>
             )}
 
             {activeTab === 'insulin' && (
-                <form onSubmit={(event) => event.preventDefault()}>
+                <form onSubmit={handleInsulinSubmit}>
                     <h3>Log Insulin Dose</h3>
 
                     <div className="form-field">
@@ -206,6 +265,7 @@ export default function ManualLogging({ patientId, onGlucoseSaved }) {
                             name="units"
                             type="number"
                             min="0.1"
+                            max="100"
                             step="0.1"
                             required
                             value={insulin.units}
@@ -224,10 +284,12 @@ export default function ManualLogging({ patientId, onGlucoseSaved }) {
                             value={insulin.insulinType}
                             onChange={handleInsulinChange}
                         >
+                            <option value="rapid">Rapid-acting</option>
                             <option value="short">Short-acting</option>
                             <option value="intermediate">Intermediate-acting</option>
                             <option value="long">Long-acting</option>
-                            <option value="other">Other</option>
+                            <option value="premixed">Premixed</option>
+                            <option value="">Unspecified</option>
                         </select>
                     </div>
 
@@ -245,14 +307,16 @@ export default function ManualLogging({ patientId, onGlucoseSaved }) {
                         />
                     </div>
 
-                    <button type="submit" disabled={!savingAvailable || !patientId}>
-                        Save Insulin Dose
+                    <button type="submit" disabled={saving || !patientId}>
+                        {saving ? 'Saving...' : 'Save Insulin Dose'}
                     </button>
+
+                    {messages}
                 </form>
             )}
 
             {activeTab === 'nutrition' && (
-                <form onSubmit={(event) => event.preventDefault()}>
+                <form onSubmit={handleNutritionSubmit}>
                     <h3>Log Meal</h3>
 
                     <div className="form-field">
@@ -264,6 +328,7 @@ export default function ManualLogging({ patientId, onGlucoseSaved }) {
                             name="description"
                             type="text"
                             required
+                            maxLength={500}
                             value={nutrition.description}
                             onChange={handleNutritionChange}
                             placeholder="e.g. Chicken and rice"
@@ -272,15 +337,15 @@ export default function ManualLogging({ patientId, onGlucoseSaved }) {
 
                     <div className="form-field">
                         <label htmlFor="meal-carbs">
-                            Carbohydrates (grams)
+                            Carbohydrates (grams, optional)
                         </label>
                         <input
                             id="meal-carbs"
                             name="carbs"
                             type="number"
                             min="0"
+                            max="500"
                             step="0.1"
-                            required
                             value={nutrition.carbs}
                             onChange={handleNutritionChange}
                             placeholder="e.g. 45"
@@ -289,15 +354,15 @@ export default function ManualLogging({ patientId, onGlucoseSaved }) {
 
                     <div className="form-field">
                         <label htmlFor="meal-calories">
-                            Calories (kcal)
+                            Calories (kcal, optional)
                         </label>
                         <input
                             id="meal-calories"
                             name="calories"
                             type="number"
                             min="0"
+                            max="5000"
                             step="1"
-                            required
                             value={nutrition.calories}
                             onChange={handleNutritionChange}
                             placeholder="e.g. 500"
@@ -318,22 +383,13 @@ export default function ManualLogging({ patientId, onGlucoseSaved }) {
                         />
                     </div>
 
-                    <button type="submit" disabled={!savingAvailable || !patientId}>
-                        Save Meal
+                    <button type="submit" disabled={saving || !patientId}>
+                        {saving ? 'Saving...' : 'Save Meal'}
                     </button>
+
+                    {messages}
                 </form>
             )}
-
-            <p
-                role="status"
-                style={{
-                    marginTop: '18px',
-                    fontSize: '14px',
-                    color: '#64748b',
-                }}
-            >
-              Insulin and nutrition saving are not yet available.
-            </p>
         </section>
     );
 }
