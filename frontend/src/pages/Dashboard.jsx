@@ -12,6 +12,7 @@ import HbA1cChart from '../components/HbA1cChart';
 import InsulinChart from '../components/InsulinChart';
 import ManualLogging from '../components/ManualLogging';
 import MessagingPortal from '../components/MessagingPortal';
+import DataNotice from '../components/DataNotice';
 
 export default function Dashboard() {
     const [patients, setPatients] = useState([]);
@@ -136,6 +137,8 @@ export default function Dashboard() {
                 <h1>GlucoTrack</h1>
                 <p>Diabetes Management Dashboard</p>
             </header>
+
+            <DataNotice />
 
             {/* Patient selection */}
             <div className="patient-selector">

@@ -9,6 +9,7 @@ import {
     Tooltip,
     Legend,
 } from 'recharts';
+import SourceNote from './SourceNote';
 
 export default function InsulinChart({ readings = [] }) {
     // Group insulin doses by day and insulin type
@@ -25,16 +26,18 @@ export default function InsulinChart({ readings = [] }) {
         if (!dailyTotals[date]) {
             dailyTotals[date] = {
                 date,
+                rapid: 0,
                 short: 0,
                 intermediate: 0,
                 long: 0,
+                premixed: 0,
                 other: 0,
             };
         }
 
         const type = String(reading.insulin_type || '').toLowerCase();
 
-        if (['short', 'intermediate', 'long'].includes(type)) {
+        if (['rapid', 'short', 'intermediate', 'long', 'premixed'].includes(type)) {
             dailyTotals[date][type] += units;
         } else {
             dailyTotals[date].other += units;
@@ -53,6 +56,7 @@ export default function InsulinChart({ readings = [] }) {
         <section className="chart-card">
             <h2>Insulin History</h2>
             <p>Daily insulin doses by type (last 14 days)</p>
+            <SourceNote records={readings} noun="doses" />
 
             {data.length === 0 ? (
                 <p>No insulin records available for this patient.</p>
@@ -97,6 +101,13 @@ export default function InsulinChart({ readings = [] }) {
                             <Legend />
 
                             <Bar
+                                dataKey="rapid"
+                                name="Rapid-acting"
+                                stackId="insulin"
+                                fill="#0284c7"
+                            />
+
+                            <Bar
                                 dataKey="short"
                                 name="Short-acting"
                                 stackId="insulin"
@@ -115,6 +126,13 @@ export default function InsulinChart({ readings = [] }) {
                                 name="Long-acting"
                                 stackId="insulin"
                                 fill="#6366f1"
+                            />
+
+                            <Bar
+                                dataKey="premixed"
+                                name="Premixed"
+                                stackId="insulin"
+                                fill="#db2777"
                             />
 
                             <Bar
