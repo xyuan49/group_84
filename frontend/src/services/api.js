@@ -70,3 +70,9 @@ export function createMeal(patientId, body) {
         'meal'
     );
 }
+
+export function getAlerts(patientId, days = 7) {
+    return getData(
+        `/api/patients/${encodeURIComponent(patientId)}/alerts?days=${days}`
+    );
+}

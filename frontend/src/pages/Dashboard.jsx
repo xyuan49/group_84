@@ -13,6 +13,7 @@ import InsulinChart from '../components/InsulinChart';
 import ManualLogging from '../components/ManualLogging';
 import MessagingPortal from '../components/MessagingPortal';
 import DataNotice from '../components/DataNotice';
+import AlertsPanel from '../components/AlertsPanel';
 
 export default function Dashboard() {
     const [patients, setPatients] = useState([]);
@@ -30,6 +31,9 @@ export default function Dashboard() {
     const [loadingInsulin, setLoadingInsulin] = useState(false);
 
     const [error, setError] = useState('');
+
+    // Bumped after a new glucose reading so the alerts reload.
+    const [alertsVersion, setAlertsVersion] = useState(0);
 
     // Load patient list
     useEffect(() => {
@@ -115,6 +119,7 @@ export default function Dashboard() {
     }
 
     function refreshGlucose() {
+        setAlertsVersion((version) => version + 1);
         getGlucose(selectedId)
             .then((data) => setReadings(data))
             .catch((error) => {
@@ -165,6 +170,15 @@ export default function Dashboard() {
             )}
 
             {loadingPatients && <p>Loading patients...</p>}
+
+            {/* Rule-based alerts */}
+            {selectedId && (
+                <AlertsPanel
+                    key={`alerts-${selectedId}`}
+                    patientId={selectedId}
+                    refreshKey={alertsVersion}
+                />
+            )}
 
             {/* Glucose chart */}
             {loadingGlucose ? (

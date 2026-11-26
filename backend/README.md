@@ -157,6 +157,17 @@ uvicorn app.main:app --reload
 
 Docs: http://127.0.0.1:8000/docs or http://127.0.0.1:8000/redoc
 
+## Alerts
+
+`GET /api/patients/<id>/alerts?days=7` runs the rules in `app/alerts.py` and
+returns alerts most severe first. Glucose rules look at the last `days` days
+of readings (ending at the latest one); HbA1c and blood pressure use the
+latest results. Thresholds follow the ADA Standards of Care: lows below 70
+and 54 mg/dL, more than 25% of readings above 180 mg/dL, fasting above
+130 mg/dL on most days, HbA1c 7% or higher, blood pressure 130/80 or higher.
+A reading below 54 mg/dL is marked `emergency`; the dashboard shows a
+simulated "call emergency services" prompt and contacts no one.
+
 ## FHIR API
 
 `app/routers/fhir.py` serves glucose readings, labs and vitals as FHIR R4
