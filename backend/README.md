@@ -156,3 +156,24 @@ uvicorn app.main:app --reload
 ```
 
 Docs: http://127.0.0.1:8000/docs or http://127.0.0.1:8000/redoc
+
+## FHIR API
+
+`app/routers/fhir.py` serves glucose readings, labs and vitals as FHIR R4
+`Observation` resources (`application/fhir+json`):
+
+| Request | Returns |
+|---|---|
+| `GET /fhir/Observation?patient=<id>&code=<loinc>&_count=<n>` | `searchset` Bundle, newest first |
+| `GET /fhir/Observation/<id>` | one Observation (`glucose-<n>` or `obs-<n>`) |
+| `POST /fhir/Observation` | stores a glucose Observation as a patient entry, 201 |
+
+- Glucose from every source is LOINC 2339-0 in mg/dL. HbA1c, BMI and blood
+  pressure keep their LOINC code and UCUM unit.
+- `meta.tag` (`urn:glucotrack:data-source`) names the source. UCI and
+  Shanghai readings say they were paired with a synthetic patient for
+  demonstration.
+- POST accepts LOINC 2339-0 or 2345-7 in mg/dL or mmol/L (converted with
+  x 18.016). Errors come back as `OperationOutcome`.
+- Times are stored as local clock time. FHIR output adds the UTC offset of
+  `GLUCOTRACK_TIMEZONE` (default `America/New_York`).
