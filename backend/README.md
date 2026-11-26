@@ -146,9 +146,13 @@ To add an endpoint, follow `app/routers/patients.py`:
 ```
 cd backend
 python -m pytest
-
-View docs:
-cd backend
-uvicorn app.api.main:app --reload      
-Navigate to: http://127.0.0.1:8000/docs or http://127.0.0.1:8000/redoc
 ```
+
+## Run the API
+
+```
+cd backend
+uvicorn app.main:app --reload
+```
+
+Docs: http://127.0.0.1:8000/docs or http://127.0.0.1:8000/redoc
