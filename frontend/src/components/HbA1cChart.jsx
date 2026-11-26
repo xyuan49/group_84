@@ -9,6 +9,7 @@ import {
     Tooltip,
     ReferenceLine,
 } from 'recharts';
+import { sourceLabel } from '../dataSources';
 
 export default function HbA1cChart({ readings = [] }) {
     const data = readings
@@ -28,6 +29,7 @@ export default function HbA1cChart({ readings = [] }) {
         <section className="chart-card">
             <h2>HbA1c History</h2>
             <p>Hemoglobin A1c measurements over time</p>
+            <p className="source-note">Source: {sourceLabel('fhir')}</p>
 
             {data.length === 0 ? (
                 <p>No HbA1c measurements available for this patient.</p>

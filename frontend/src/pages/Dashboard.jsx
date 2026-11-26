@@ -12,6 +12,8 @@ import HbA1cChart from '../components/HbA1cChart';
 import InsulinChart from '../components/InsulinChart';
 import ManualLogging from '../components/ManualLogging';
 import MessagingPortal from '../components/MessagingPortal';
+import DataNotice from '../components/DataNotice';
+import AlertsPanel from '../components/AlertsPanel';
 
 export default function Dashboard() {
     const [patients, setPatients] = useState([]);
@@ -29,6 +31,9 @@ export default function Dashboard() {
     const [loadingInsulin, setLoadingInsulin] = useState(false);
 
     const [error, setError] = useState('');
+
+    // Bumped after a new glucose reading so the alerts reload.
+    const [alertsVersion, setAlertsVersion] = useState(0);
 
     // Load patient list
     useEffect(() => {
@@ -114,10 +119,19 @@ export default function Dashboard() {
     }
 
     function refreshGlucose() {
+        setAlertsVersion((version) => version + 1);
         getGlucose(selectedId)
             .then((data) => setReadings(data))
             .catch((error) => {
                 setError(`Reading saved, but the chart could not refresh: ${error.message}`);
+            });
+    }
+
+    function refreshInsulin() {
+        getInsulin(selectedId)
+            .then((data) => setInsulinReadings(data))
+            .catch((error) => {
+                setError(`Dose saved, but the chart could not refresh: ${error.message}`);
             });
     }
 
@@ -128,6 +142,8 @@ export default function Dashboard() {
                 <h1>GlucoTrack</h1>
                 <p>Diabetes Management Dashboard</p>
             </header>
+
+            <DataNotice />
 
             {/* Patient selection */}
             <div className="patient-selector">
@@ -154,6 +170,15 @@ export default function Dashboard() {
             )}
 
             {loadingPatients && <p>Loading patients...</p>}
+
+            {/* Rule-based alerts */}
+            {selectedId && (
+                <AlertsPanel
+                    key={`alerts-${selectedId}`}
+                    patientId={selectedId}
+                    refreshKey={alertsVersion}
+                />
+            )}
 
             {/* Glucose chart */}
             {loadingGlucose ? (
@@ -182,6 +207,7 @@ export default function Dashboard() {
                     key={selectedId}
                     patientId={selectedId}
                     onGlucoseSaved={refreshGlucose}
+                    onInsulinSaved={refreshInsulin}
                 />
             )}
 

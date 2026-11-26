@@ -149,3 +149,65 @@ def test_create_glucose_rejects_invalid_value(client, patients):
 
     assert response.status_code == 422
     assert client.get("/api/patients/p-1/glucose").json() == []
+
+
+def test_create_insulin(client, patients):
+    body = {"units": 8, "insulin_type": "rapid", "administered_at": "2026-11-15T07:30:00"}
+
+    response = client.post("/api/patients/p-1/insulin", json=body)
+
+    assert response.status_code == 201
+    saved = response.json()
+    assert saved["units"] == 8
+    assert saved["insulin_type"] == "rapid"
+    assert saved["source"] == "user"
+    assert client.get("/api/patients/p-1/insulin?source=user").json() == [saved]
+    assert client.get("/api/patients/p-2/insulin").json() == []
+
+
+@pytest.mark.parametrize("body", [
+    {"units": 0, "administered_at": "2026-11-15T07:30:00"},
+    {"units": 101, "administered_at": "2026-11-15T07:30:00"},
+    {"units": 8, "insulin_type": "other", "administered_at": "2026-11-15T07:30:00"},
+    {"units": 8},
+])
+def test_create_insulin_rejects_invalid_body(client, patients, body):
+    assert client.post("/api/patients/p-1/insulin", json=body).status_code == 422
+    assert client.get("/api/patients/p-1/insulin").json() == []
+
+
+def test_create_meal(client, patients):
+    body = {"eaten_at": "2026-11-15T12:15:00", "description": "Chicken and rice", "carbs_g": 45, "calories": 520}
+
+    response = client.post("/api/patients/p-1/meals", json=body)
+
+    assert response.status_code == 201
+    saved = response.json()
+    assert saved["description"] == "Chicken and rice"
+    assert saved["carbs_g"] == 45
+    assert saved["source"] == "user"
+    assert client.get("/api/patients/p-1/meals?source=user").json() == [saved]
+
+
+def test_create_meal_with_only_description(client, patients):
+    body = {"eaten_at": "2026-11-15T12:15:00", "description": "Apple"}
+
+    saved = client.post("/api/patients/p-1/meals", json=body).json()
+
+    assert saved["carbs_g"] is None
+    assert saved["calories"] is None
+
+
+@pytest.mark.parametrize("body", [
+    {"eaten_at": "2026-11-15T12:15:00", "carbs_g": -1},
+    {"eaten_at": "2026-11-15T12:15:00", "description": ""},
+    {"description": "Apple"},
+])
+def test_create_meal_rejects_invalid_body(client, patients, body):
+    assert client.post("/api/patients/p-1/meals", json=body).status_code == 422
+    assert client.get("/api/patients/p-1/meals").json() == []
+
+
+def test_create_log_for_unknown_patient_is_404(client, patients):
+    body = {"units": 8, "administered_at": "2026-11-15T07:30:00"}
+    assert client.post("/api/patients/nobody/insulin", json=body).status_code == 404

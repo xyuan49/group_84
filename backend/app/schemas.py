@@ -120,3 +120,21 @@ class MealOut(ORMModel):
     carbs_g: float | None
     calories: float | None
     source: LogSource
+
+
+# --- alerts (rule engine in app/alerts.py) ---------------------------------
+
+
+class AlertOut(BaseModel):
+    rule: str
+    severity: Literal["urgent", "warning", "info"]
+    title: str
+    detail: str
+    emergency: bool  # very low glucose: a real app would offer to call emergency services
+
+
+class AlertsOut(BaseModel):
+    days: int
+    window_start: datetime | None  # glucose window; None when there are no readings
+    window_end: datetime | None
+    alerts: list[AlertOut]
