@@ -101,3 +101,76 @@ Then load it with `python -m app.loaders.shanghai ../data/shanghai_raw/Shanghai_
   description, since the meal time is still known.
 - Diet text is in English (column `Dietary intake`) and Chinese (`饮食`); only
   the English column is used.
+
+## How the sources are combined
+
+The three datasets describe different people. Synthea gives each patient a
+clinical record (FHIR R4). The UCI and Shanghai series are attached to
+Synthea patients **for demonstration only**: they are not real observations
+of those patients. Every glucose, insulin and meal row keeps a `source`
+column (`fhir`, `uci`, `cgm`, `user`), and the FHIR API marks UCI and
+Shanghai readings as "paired with a synthetic patient for demonstration".
+
+### Pairing
+
+| Source | Attached to | Patients |
+|---|---|---|
+| Synthea (FHIR) | itself | all 85 |
+| UCI | Synthea patients with an insulin prescription | 27 |
+| Shanghai CGM | Synthea patients with no insulin prescription; only Shanghai people who received no insulin | 41 |
+
+Each series goes to one patient, in a fixed order, so the pairing is the same
+on every run. The other 17 patients have only Synthea lab glucose.
+
+### Units
+
+| Measure | Stored as | Synthea (FHIR) | UCI | Shanghai CGM |
+|---|---|---|---|---|
+| Glucose | mg/dL | `valueQuantity` in mg/dL (LOINC 2339-0, 2345-7) | mg/dL, as recorded | mg/dL (column `CGM (mg / dl)`) |
+| Insulin | units | – | units | not stored (only non-insulin people are used) |
+| Meals | description, carbs g, kcal | – | size only ("Larger than usual meal") | food text, e.g. "Rice 150 g" |
+| HbA1c | % | `valueQuantity` (LOINC 4548-4) | – | – |
+| BMI | kg/m2 | `valueQuantity` (LOINC 39156-5) | – | – |
+| Blood pressure | mm[Hg] | panel 85354-9 split into systolic 8480-6 and diastolic 8462-4 | – | – |
+
+No dataset needs a unit conversion: all glucose already arrives in mg/dL.
+The only conversion is for data sent to `POST /fhir/Observation`, which
+accepts mmol/L and stores mg/dL (mmol/L x 18.016, from glucose's molar mass of
+180.16 g/mol).
+
+Code mappings:
+
+- UCI glucose codes become a meal context: 58 fasting (pre-breakfast); 60,
+  62, 64 before meal; 59, 61, 63 after meal; 48 and 57 unspecified. Insulin
+  codes become a type: 33 short (Regular), 34 intermediate (NPH), 35 long
+  (UltraLente). Codes 65 and 69-72 (hypoglycemia symptoms, exercise, special
+  events) are not stored.
+- Shanghai CGM has no meal context. Finger-stick glucose, ketones and
+  oral-medication columns are not stored.
+
+### Validation
+
+Rows are checked with Pydantic models before they are stored; invalid rows
+are counted and skipped:
+
+- Glucose must be 20-600 mg/dL (the range of home meters and CGM sensors).
+- Insulin doses must be more than 0 and at most 100 units.
+- UCI series need records on at least 14 days, and at least 80% of records
+  with real device times. Rows at 08:00, 12:00, 18:00 or 22:00 are treated as paper-log
+  entries.
+- Shanghai series need records on at least 7 days. Only the longest file per
+  person is used.
+
+### Dates and times
+
+- All times are stored as the patient's local clock time with no timezone,
+  so time-of-day patterns ("high after dinner") read correctly.
+- Synthea times carry a US Eastern offset (-04:00 or -05:00). The offset is
+  dropped and the clock time kept. The FHIR API adds the offset back from
+  `GLUCOTRACK_TIMEZONE` (default `America/New_York`).
+- Synthea uses reference date 2026-11-01. Each UCI and Shanghai series is
+  shifted by a whole number of days so that its last reading falls on that
+  date (`--anchor` to change it). Time of day and the gaps between readings
+  are unchanged, so the most recent 14 days line up with the Synthea record.
+- UCI series come from 1988-1991 and Shanghai series from 2020-2022, so the
+  shifted dates are not the dates the readings were taken.
